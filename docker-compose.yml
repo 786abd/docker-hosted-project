@@ -1,0 +1,51 @@
+services:
+
+  nginx:
+    build: ./nginx
+    container_name: nginx_server
+    ports:
+      - 9000:80
+    depends_on:
+      - backend
+
+
+  backend:
+    build: ./backend
+    container_name: backend_service
+    expose:
+      - 3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+    env_file:
+      - .env
+    
+    restart: unless-stopped
+    mem_limit: 100m
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    
+
+  
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    env_file:
+      - .env
+
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+volumes:
+  db_data:
